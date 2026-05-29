@@ -2,6 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const MapPicker = dynamic(
+  () => import("./MapPicker"),
+  {
+    ssr: false,
+  }
+);
 
 import {
   ArrowLeft,
@@ -39,6 +47,11 @@ export default function CreateReportPage() {
   const [body, setBody] = useState("");
   const [category, setCategory] = useState(1);
   const [location, setLocation] = useState("");
+  const [showMap, setShowMap] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState([
+    -6.200000,
+    106.816666,
+  ]);
   const [image, setImage] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -125,78 +138,113 @@ export default function CreateReportPage() {
     setPreview(imageUrl);
   };
 
-  // =========================
-  // HANDLE SUBMIT
-  // =========================
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
+ // =========================
+// HANDLE SUBMIT
+// =========================
+const handleSubmit = async () => {
+  try {
+    setLoading(true);
 
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-      if (!token) {
-        alert("Silahkan login terlebih dahulu");
-        return;
-      }
-
-      const formData = new FormData();
-
-      formData.append("header", header);
-
-      // GABUNGKAN BODY + LOCATION
-      formData.append(
-        "body",
-        `Lokasi: ${location}\n\n${body}`
-      );
-
-      // category_id sementara default
-      formData.append("category_id", category);
-
-      // KIRIM LOCATION
-      formData.append("location", location);
-
-      if (image) {
-        formData.append("image", image);
-      }
-
-      const response = await fetch(
-        "http://localhost:5000/api/posts",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.message || "Gagal membuat laporan");
-        return;
-      }
-
-      alert("Laporan berhasil dibuat");
-
-      // RESET FORM
-      setHeader("");
-      setBody("");
-      setCategory("Jalan Rusak");
-      setLocation("");
-      setImage(null);
-      setPreview(null);
-
-      // REDIRECT KE HOMEPAGE
-      router.push("/user/homepage");
-    } catch (error) {
-      console.log(error);
-
-      alert("Terjadi kesalahan");
-    } finally {
-      setLoading(false);
+    if (!token) {
+      alert("Silahkan login terlebih dahulu");
+      return;
     }
-  };
+
+    // VALIDASI FOTO WAJIB ADA
+    if (!image) {
+      alert("Bukti foto wajib diupload sebelum mengirim laporan!");
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("header", header);
+
+    // GABUNGKAN BODY + LOCATION
+    formData.append(
+      "body",
+      `Lokasi: ${location}\n\n${body}`
+    );
+
+    // category_id sementara default
+    formData.append("category_id", category);
+
+    // KIRIM LOCATION
+    formData.append("location", location);
+
+    if (image) {
+      formData.append("image", image);
+    }
+
+    const response = await fetch(
+      "http://localhost:5000/api/posts",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Gagal membuat laporan");
+      return;
+    }
+
+    alert("Laporan berhasil dibuat");
+
+    // RESET FORM
+    setHeader("");
+    setBody("");
+    setCategory("Jalan Rusak");
+    setLocation("");
+    setImage(null);
+    setPreview(null);
+
+    // REDIRECT KE HOMEPAGE
+    router.push("/user/homepage");
+
+  } catch (error) {
+    console.log(error);
+
+    alert("Terjadi kesalahan");
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleCurrentLocation = () => {
+
+  if (!navigator.geolocation) {
+    alert("Geolocation tidak didukung");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      setSelectedPosition([lat, lng]);
+
+      setLocation(
+        `Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`
+      );
+    },
+
+    (error) => {
+      console.log(error);
+      alert("Gagal mengambil lokasi");
+    }
+  );
+};
 
   const navItems = [
     {
@@ -590,29 +638,59 @@ export default function CreateReportPage() {
               </div>
 
               {/* LOCATION */}
-              <div>
-                <label className="block text-sm font-bold text-[#3b2a1f] mb-2">
-                  Location
-                </label>
+<div>
+  <label className="block text-sm font-bold text-[#3b2a1f] mb-2">
+    Location
+  </label>
 
-                <div className="flex items-center bg-[#fcfaf8] border border-[#eadfd4] rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#c8956b]/30 transition">
+  {/* BUTTONS */}
+  <div className="flex flex-wrap gap-3 mb-4">
 
-                  <MapPin
-                    className="text-[#8b735f] mr-3"
-                    size={18}
-                  />
+    <button
+      type="button"
+      onClick={handleCurrentLocation}
+      className="px-4 py-2 rounded-xl bg-[#7a3f1c] text-white text-sm font-semibold hover:opacity-90"
+    >
+      Current Location
+    </button>
 
-                  <input
-                    type="text"
-                    placeholder="Jl. Sudirman No. 123"
-                    value={location}
-                    onChange={(e) =>
-                      setLocation(e.target.value)
-                    }
-                    className="bg-transparent outline-none flex-1 text-sm placeholder:text-[#b29c8b]"
-                  />
-                </div>
-              </div>
+    <button
+      type="button"
+      onClick={() => setShowMap(!showMap)}
+      className="px-4 py-2 rounded-xl bg-[#c8956b] text-white text-sm font-semibold hover:opacity-90"
+    >
+       Pick From Map
+    </button>
+  </div>
+
+  {/* INPUT */}
+  <div className="flex items-center bg-[#fcfaf8] border border-[#eadfd4] rounded-2xl px-4 py-3 mb-4">
+
+    <MapPin
+      className="text-[#8b735f] mr-3"
+      size={18}
+    />
+
+    <input
+      type="text"
+      placeholder="Masukkan lokasi..."
+      value={location}
+      onChange={(e) =>
+        setLocation(e.target.value)
+      }
+      className="bg-transparent outline-none flex-1 text-sm"
+    />
+  </div>
+
+  {/* MAP */}
+  {showMap && (
+    <MapPicker
+      selectedPosition={selectedPosition}
+      setSelectedPosition={setSelectedPosition}
+      setLocation={setLocation}
+    />
+  )}
+</div>
 
               {/* DESCRIPTION */}
               <div>

@@ -408,7 +408,7 @@ export default function MyReportsPage() {
 
       {/* SIDEBAR */}
       <aside
-        className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-gradient-to-b from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] text-white transition-all duration-300 ${
+        className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-linear-to-b from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] text-white transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-20"
         }`}
       >
@@ -545,7 +545,7 @@ export default function MyReportsPage() {
           </div>
 
           {/* SEARCH BAR */}
-          <div className="hidden md:flex items-center bg-white border border-[#eadfd4] rounded-2xl px-4 py-3 shadow-sm w-[330px]">
+          <div className="hidden md:flex items-center bg-white border border-[#eadfd4] rounded-2xl px-4 py-3 shadow-sm w-82.5">
             <Search
               size={18}
               className="text-[#a07a5e]"
@@ -578,7 +578,7 @@ export default function MyReportsPage() {
                 onClick={() => setFilter(tab)}
                 className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${
                   filter === tab
-                    ? "bg-gradient-to-r from-[#6f4324] to-[#8a5a39] text-white shadow-lg"
+                    ? "bg-linear-to-r from-[#6f4324] to-[#8a5a39] text-white shadow-lg"
                     : "bg-white text-[#7a5c44] border border-[#eadfd4]"
                 }`}
               >
@@ -683,18 +683,17 @@ export default function MyReportsPage() {
                 </div>
 
                 {/* DELETE */}
-                <div className="px-5 pb-5">
-                  <button
-                    onClick={() =>
-                      handleDelete(report.id)
-                    }
-                    className="w-full h-12 rounded-2xl bg-gradient-to-r from-red-500 to-red-400 hover:opacity-90 text-white font-semibold flex items-center justify-center gap-2 transition"
-                  >
-                    <Trash2 size={16} />
-
-                    Delete Report
-                  </button>
-                </div>
+                {report.status?.toLowerCase() === "pending" && (
+                  <div className="px-5 pb-5">
+                    <button
+                      onClick={() => handleDelete(report.id)}
+                      className="w-full h-12 rounded-2xl bg-linear-to-r from-red-500 to-red-400 hover:opacity-90 text-white font-semibold flex items-center justify-center gap-2 transition"
+                    >
+                      <Trash2 size={16} />
+                      Delete Report
+                    </button>
+                  </div>
+                )}
 
               </div>
 
@@ -808,7 +807,7 @@ export default function MyReportsPage() {
                               "user"
                             )
                           ).id
-                            ? "bg-gradient-to-r from-[#6f4324] to-[#8a5a39] text-white rounded-tr-none"
+                            ? "bg-linear-to-r from-[#6f4324] to-[#8a5a39] text-white rounded-tr-none"
                             : "bg-[#f5eee8] text-[#3d2a20] rounded-tl-none"
                         }`}
                       >
@@ -858,7 +857,7 @@ export default function MyReportsPage() {
 
                 <button
                   onClick={sendMessage}
-                  className="w-11 h-11 rounded-xl bg-gradient-to-r from-[#6f4324] to-[#8a5a39] text-white flex items-center justify-center"
+                  className="w-11 h-11 rounded-xl bg-linear-to-r from-[#6f4324] to-[#8a5a39] text-white flex items-center justify-center"
                 >
                   <Send size={18} />
                 </button>

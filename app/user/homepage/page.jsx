@@ -237,7 +237,7 @@ export default function UserHomepage() {
       <aside
         className={`
           fixed top-0 left-0 h-full z-30 flex flex-col
-          bg-gradient-to-b from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] text-white
+          bg-linear-to-b from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] text-white
           transition-all duration-300 ease-in-out
           ${sidebarOpen ? "w-64" : "w-20"}
         `}
@@ -254,7 +254,7 @@ export default function UserHomepage() {
         {/* Profile mini card (expanded) */}
         {sidebarOpen && (
           <div className="mx-4 mt-5 mb-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4 flex items-center gap-3">
-            <div className="relative group flex-shrink-0">
+            <div className="relative group shrink-0">
               <img
                 src={
                   profileImage
@@ -328,7 +328,7 @@ export default function UserHomepage() {
                 ${!sidebarOpen ? "justify-center" : ""}
               `}
             >
-              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="shrink-0">{item.icon}</span>
               {sidebarOpen && (
                 <span className="whitespace-nowrap">{item.label}</span>
               )}
@@ -348,7 +348,7 @@ export default function UserHomepage() {
               ${!sidebarOpen ? "justify-center" : ""}
             `}
           >
-            <span className="relative flex-shrink-0">
+            <span className="relative shrink-0">
               <BellIcon />
               {/* Red dot badge */}
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#e57c4a] rounded-full border-2 border-[#2b1d15]" />
@@ -366,7 +366,7 @@ export default function UserHomepage() {
               ${!sidebarOpen ? "justify-center" : ""}
             `}
           >
-            <span className="flex-shrink-0"><ArrowRightOnRectangleIcon /></span>
+            <span className="shrink-0"><ArrowRightOnRectangleIcon /></span>
             {sidebarOpen && <span>Logout</span>}
           </button>
         </div>
@@ -427,7 +427,7 @@ export default function UserHomepage() {
           <div className="relative rounded-[28px] overflow-hidden mb-8 shadow-xl">
 
             {/* Background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b]" />
+            <div className="absolute inset-0 bg-linear-to-br from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b]" />
 
             {/* Glow blobs */}
             <div
@@ -441,8 +441,8 @@ export default function UserHomepage() {
             />
 
             {/* Decorative rings */}
-            <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full border-[40px] border-white/5" />
-            <div className="absolute -bottom-20 -left-10 w-64 h-64 rounded-full border-[30px] border-white/5" />
+            <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full border-40 border-white/5" />
+            <div className="absolute -bottom-20 -left-10 w-64 h-64 rounded-full border-30 border-white/5" />
 
             {/* Decorative dots */}
             <div className="absolute top-4 right-32 w-4 h-4 rounded-full bg-[#f0c090]/40" />
@@ -463,7 +463,7 @@ export default function UserHomepage() {
                 </p>
               </div>
 
-              <div className="flex gap-3 flex-shrink-0">
+              <div className="flex gap-3 shrink-0">
                 <button
                   onClick={() => router.push('/user/createreport')}
                   className="flex items-center gap-2 bg-white text-[#5c2d0e] font-bold px-5 py-3 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-sm"
@@ -488,9 +488,9 @@ export default function UserHomepage() {
 
             {/* Total Reports */}
             <div className="group relative bg-white rounded-3xl border border-[#eee5da] shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden p-6">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#fdf6f0] to-white opacity-0 group-hover:opacity-100 transition-all duration-300" />
+              <div className="absolute inset-0 bg-linear-to-br from-[#fdf6f0] to-white opacity-0 group-hover:opacity-100 transition-all duration-300" />
               <div className="relative z-10 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#5c2d0e] to-[#8b4a20] flex items-center justify-center shadow-md shadow-[#8b4a20]/30 flex-shrink-0 text-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-[#5c2d0e] to-[#8b4a20] flex items-center justify-center shadow-md shadow-[#8b4a20]/30 shrink-0 text-2xl">
                   📋
                 </div>
                 <div>
@@ -499,7 +499,7 @@ export default function UserHomepage() {
                 </div>
               </div>
               <div className="relative z-10 mt-4 h-1.5 rounded-full bg-[#f0e5d8] overflow-hidden">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#5c2d0e] to-[#c8956b]" style={{ width: "100%" }} />
+                <div className="h-full rounded-full bg-linear-to-r from-[#5c2d0e] to-[#c8956b]" style={{ width: "100%" }} />
               </div>
             </div>
 

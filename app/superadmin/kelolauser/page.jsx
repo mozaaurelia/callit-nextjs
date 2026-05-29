@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
-// ── Heroicons inline SVG ────────────────────────────────────────────────────
+// =============================================================================
+// ICON COMPONENTS
+// Semua icon di bawah adalah SVG inline dari Heroicons.
+// Dibuat sebagai komponen terpisah supaya bisa dipakai ulang di mana saja
+// tanpa harus install library tambahan.
+// =============================================================================
 
 const GridIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
@@ -35,6 +40,8 @@ const ArrowRightOnRectangleIcon = () => (
   </svg>
 );
 
+// ChevronLeftIcon: icon panah untuk toggle sidebar buka/tutup
+// prop `rotated` = true → icon diputar 180 derajat (sidebar tertutup)
 const ChevronLeftIcon = ({ rotated }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="white"
     className={`w-3 h-3 transition-transform duration-300 ${rotated ? "rotate-180" : ""}`}>
@@ -54,18 +61,6 @@ const ShieldCheckIcon = () => (
   </svg>
 );
 
-const PencilIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-  </svg>
-);
-
-const TrashIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-  </svg>
-);
-
 const PlusCircleIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -73,7 +68,7 @@ const PlusCircleIcon = () => (
 );
 
 const UserSingleIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-6 h-6">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
   </svg>
 );
@@ -96,16 +91,17 @@ const TagIcon = () => (
   </svg>
 );
 
-// ── Avatar ──────────────────────────────────────────────────────────────────
 function Avatar({ name = "?", size = 36 }) {
-  const colors = ["#c8956b", "#8b4a20", "#a07a5e", "#7a5c44", "#5c2d0e"];
-  const idx = (name.charCodeAt(0) || 0) % colors.length;
+  const colors  = ["#c8956b", "#8b4a20", "#a07a5e", "#7a5c44", "#5c2d0e"];
+  const idx     = (name.charCodeAt(0) || 0) % colors.length;
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
   return (
     <div
       className="flex-shrink-0 flex items-center justify-center rounded-full text-white font-bold border-2 border-white shadow-sm"
       style={{
-        width: size, height: size,
+        width: size,
+        height: size,
         background: `linear-gradient(135deg, ${colors[idx]}, ${colors[(idx + 2) % colors.length]})`,
         fontSize: size * 0.34,
       }}
@@ -115,7 +111,6 @@ function Avatar({ name = "?", size = 36 }) {
   );
 }
 
-// ── Role Badge ──────────────────────────────────────────────────────────────
 function RoleBadge({ role }) {
   const map = {
     superadmin: { bg: "bg-[#f0e5d8]", text: "text-[#5c2d0e]", dot: "bg-[#c8956b]", label: "Superadmin" },
@@ -123,6 +118,7 @@ function RoleBadge({ role }) {
     user:       { bg: "bg-green-100",  text: "text-green-700",  dot: "bg-green-500",  label: "User" },
   };
   const s = map[role] || map.user;
+
   return (
     <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ${s.bg} ${s.text}`}>
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.dot}`} />
@@ -131,11 +127,12 @@ function RoleBadge({ role }) {
   );
 }
 
-// ── Form Field ──────────────────────────────────────────────────────────────
 function FormField({ label, type = "text", placeholder, value, onChange, icon }) {
   return (
     <div>
-      <label className="block text-xs font-bold text-[#2b1d15] mb-2 uppercase tracking-wider">{label}</label>
+      <label className="block text-xs font-bold text-[#2b1d15] mb-2 uppercase tracking-wider">
+        {label}
+      </label>
       <div className="flex items-center bg-[#fdf9f6] border border-[#e8d9cc] focus-within:border-[#c8956b] focus-within:ring-2 focus-within:ring-[#c8956b]/15 rounded-xl px-4 py-3 transition-all duration-200">
         {icon && <span className="text-[#c8956b] mr-3 flex-shrink-0">{icon}</span>}
         <input
@@ -151,11 +148,12 @@ function FormField({ label, type = "text", placeholder, value, onChange, icon })
   );
 }
 
-// ── Toast Notification ──────────────────────────────────────────────────────
 function Toast({ message, type, onClose }) {
   useEffect(() => {
-    const t = setTimeout(onClose, 3000);
-    return () => clearTimeout(t);
+    // Set timer 3 detik, lalu panggil onClose untuk menyembunyikan toast
+    const timer = setTimeout(onClose, 3000);
+    // Cleanup: batalkan timer jika komponen di-unmount sebelum 3 detik
+    return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
@@ -167,54 +165,260 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-// ───────────────────────────────────────────────────────────────────────────
+// =============================================================================
+// LOADING SPINNER COMPONENT
+// Spinner kecil yang dipakai di dalam tombol saat proses loading berlangsung.
+// =============================================================================
+function Spinner() {
+  return (
+    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
 
+
+function EditUserModal({ isOpen, user, onSave, onCancel, loading }) {
+  // State lokal untuk menyimpan isi form di dalam modal
+  const [form, setForm] = useState({
+    username:        "",
+    email:           "",
+    role:            "user",
+    password:        "",
+    confirmPassword: "",
+  });
+
+  // Setiap kali prop `user` berubah (modal dibuka dengan user berbeda),
+  // isi ulang form dengan data user yang dipilih
+  useEffect(() => {
+    if (user) {
+      setForm({
+        username:        user.username || "",
+        email:           user.email    || "",
+        role:            user.role     || "user",
+        password:        "",  // dikosongkan — opsional saat edit
+        confirmPassword: "",  // dikosongkan — opsional saat edit
+      });
+    }
+  }, [user]);
+
+  // Jika modal tidak terbuka, jangan render apapun ke DOM
+  if (!isOpen) return null;
+
+  // Fungsi yang dipanggil saat tombol "Save Changes" diklik
+  const handleSave = () => {
+    // Validasi: jika password diisi, konfirmasi harus sama
+    if (form.password && form.password !== form.confirmPassword) {
+      alert("Password tidak sama!");
+      return;
+    }
+    // Teruskan data form ke parent component lewat callback onSave
+    onSave(form);
+  };
+
+  return (
+    // Overlay gelap di belakang modal
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl rounded-[2rem] bg-white border border-[#eee5da] shadow-2xl overflow-hidden">
+
+        {/* ── HEADER MODAL: gradient coklat dengan info user yang diedit ── */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] px-8 py-10">
+          {/* Efek blur dekoratif di background header */}
+          <div className="absolute -left-20 -top-15 w-55 h-55 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute -right-20 -bottom-20 w-55 h-55 rounded-full bg-[#f0c090]/20 blur-3xl" />
+
+          {/* Avatar huruf pertama + nama user yang sedang diedit */}
+          <div className="relative z-10 flex items-center gap-5">
+            <div className="w-24 h-24 rounded-3xl bg-white/15 border border-white/10 backdrop-blur-md flex items-center justify-center text-3xl font-bold text-white shadow-lg">
+              {form.username?.charAt(0)?.toUpperCase() || "?"}
+            </div>
+            <div>
+              <p className="text-[#f0d5b8] uppercase tracking-[0.25em] text-xs font-semibold">
+                User Editor
+              </p>
+              <h2 className="text-3xl font-extrabold text-white mt-2">
+                {form.username || "User"}
+              </h2>
+              <p className="text-[#f0d5b8]/80 mt-2 text-sm">
+                Kelola informasi dan permission akun ini
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── BODY MODAL: form edit ── */}
+        <div className="p-8">
+
+          {/* Baris pertama: Username + Role berdampingan */}
+          <div className="grid md:grid-cols-2 gap-5">
+
+            {/* Input username */}
+            <div>
+              <label className="text-sm font-bold text-[#2b1d15] mb-2.5 block">Username</label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                className="w-full bg-[#fdf9f6] border border-[#e8d9cc] rounded-xl px-4 py-3 outline-none focus:border-[#c8956b] focus:ring-2 focus:ring-[#c8956b]/15 text-sm"
+              />
+            </div>
+
+            {/* Dropdown pilihan role: user / admin / superadmin */}
+            <div>
+              <label className="text-sm font-bold text-[#2b1d15] mb-2.5 block">Role</label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="w-full bg-[#fdf9f6] border border-[#e8d9cc] rounded-xl px-4 py-3 outline-none focus:border-[#c8956b] focus:ring-2 focus:ring-[#c8956b]/15 text-sm"
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="superadmin">Superadmin</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Input email — satu baris penuh */}
+          <div className="mt-5">
+            <label className="text-sm font-bold text-[#2b1d15] mb-2.5 block">Email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full bg-[#fdf9f6] border border-[#e8d9cc] rounded-xl px-4 py-3 outline-none focus:border-[#c8956b] focus:ring-2 focus:ring-[#c8956b]/15 text-sm"
+            />
+          </div>
+
+          {/* Kotak ganti password — opsional, kosongkan jika tidak ingin ganti */}
+          <div className="mt-8 rounded-3xl border border-[#eee5da] bg-[#fcfaf8] p-6">
+            <h3 className="text-base font-extrabold text-[#2b1d15] mb-5">
+              Ganti Password
+              <span className="ml-2 text-xs font-normal text-[#a07a5e]">
+                (kosongkan jika tidak ingin mengubah)
+              </span>
+            </h3>
+
+            {/* Input password baru + konfirmasi berdampingan */}
+            <div className="grid md:grid-cols-2 gap-5">
+              <div>
+                <label className="text-sm font-bold text-[#2b1d15] mb-2.5 block">Password Baru</label>
+                <input
+                  type="password"
+                  placeholder="Masukkan password baru"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full bg-[#fdf9f6] border border-[#e8d9cc] rounded-xl px-4 py-3 outline-none focus:border-[#c8956b] focus:ring-2 focus:ring-[#c8956b]/15 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-[#2b1d15] mb-2.5 block">Konfirmasi Password</label>
+                <input
+                  type="password"
+                  placeholder="Ulangi password baru"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  className="w-full bg-[#fdf9f6] border border-[#e8d9cc] rounded-xl px-4 py-3 outline-none focus:border-[#c8956b] focus:ring-2 focus:ring-[#c8956b]/15 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Tombol aksi: Cancel dan Save Changes berdampingan */}
+          <div className="grid grid-cols-2 gap-4 mt-8">
+
+            {/* Tombol Cancel: menutup modal tanpa menyimpan perubahan */}
+            <button
+              onClick={onCancel}
+              className="rounded-2xl border border-[#e8d9cc] bg-[#fdf9f6] text-[#7a5c44] font-bold hover:bg-[#f7efe8] transition-all duration-300 py-3 text-sm"
+            >
+              Cancel
+            </button>
+
+            {/* Tombol Save Changes: memanggil handleSave → onSave → request PUT ke API */}
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-gradient-to-r from-[#5c2d0e] to-[#8b4a20] text-white rounded-2xl shadow-lg shadow-[#8b4a20]/25 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 font-bold py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:translate-y-0"
+            >
+              {loading ? <><Spinner /> Menyimpan...</> : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// MAIN PAGE COMPONENT: KelolaUsersPage
+// Halaman utama Kelola Pengguna untuk superadmin.
+// Fitur: lihat daftar, tambah, edit, dan hapus user & admin.
+// =============================================================================
 export default function KelolaUsersPage() {
   const router = useRouter();
 
-  const [search, setSearch] = useState("");
-  const [users, setUsers] = useState([]);
-  const [admins, setAdmins] = useState([]);
-  const [stats, setStats] = useState({ users: 0, admins: 0 });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeMenu, setActiveMenu] = useState("users");
+  // ── STATE UTAMA ─────────────────────────────────────────────────────────────
+  const [search,      setSearch]      = useState("");               // Teks pencarian di topbar
+  const [users,       setUsers]       = useState([]);               // Daftar akun role "user"
+  const [admins,      setAdmins]      = useState([]);               // Daftar akun role "admin"/"superadmin"
+  const [stats,       setStats]       = useState({ users: 0, admins: 0 }); // Jumlah total untuk stat card
+  const [sidebarOpen, setSidebarOpen] = useState(true);             // Status sidebar terbuka/tertutup
+  const [activeMenu,  setActiveMenu]  = useState("users");          // Menu aktif di sidebar
 
-  // Toast
+  // ── STATE TOAST ──────────────────────────────────────────────────────────────
+  // null = tidak muncul | { message, type } = muncul
   const [toast, setToast] = useState(null);
 
-  // Loading states
-  const [loadingUser, setLoadingUser] = useState(false);
-  const [loadingAdmin, setLoadingAdmin] = useState(false);
+  // ── STATE LOADING ────────────────────────────────────────────────────────────
+  const [loadingUser,   setLoadingUser]   = useState(false); // Loading tombol "Tambah User"
+  const [loadingAdmin,  setLoadingAdmin]  = useState(false); // Loading tombol "Tambah Admin"
+  const [loadingEdit,   setLoadingEdit]   = useState(false); // Loading tombol "Save Changes" di modal edit
+  const [loadingDelete, setLoadingDelete] = useState(null);  // ID user yang sedang dihapus (null = tidak ada)
 
-  // Form tambah user
+  // ── STATE FORM TAMBAH USER BARU ──────────────────────────────────────────────
   const [newUser, setNewUser] = useState({
-    username: "", email: "", password: "", role: "user",
+    username: "",
+    email:    "",
+    password: "",
+    role:     "user", // Role selalu dikunci "user" untuk form ini
   });
 
-  // Form tambah admin
+  // ── STATE FORM TAMBAH ADMIN BARU ─────────────────────────────────────────────
   const [newAdmin, setNewAdmin] = useState({
-    username: "", email: "", password: "", role: "admin",
+    username: "",
+    email:    "",
+    password: "",
+    role:     "admin", // Default "admin", bisa diubah ke "superadmin" lewat dropdown
   });
 
-  // LOAD DATA
-  useEffect(() => {
-    fetchUsers();
+  // ── STATE MODAL EDIT ─────────────────────────────────────────────────────────
+  // null = modal tertutup | object user = modal terbuka dengan data user tersebut
+  const [editTarget, setEditTarget] = useState(null);
+
+  // ── HELPER: TAMPILKAN TOAST ──────────────────────────────────────────────────
+  // Dipanggil setelah aksi berhasil atau gagal untuk menampilkan notifikasi
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type });
   }, []);
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-  };
-
-  // FETCH USERS
-  const fetchUsers = async () => {
+  // =============================================================================
+  // FETCH SEMUA USER DAN ADMIN
+  // Mengambil seluruh data dari API lalu memisahkan mana yang user dan admin.
+  // Dipanggil: saat halaman pertama dimuat & setelah setiap aksi create/update/delete.
+  // =============================================================================
+  const fetchUsers = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token"); // Ambil token JWT dari localStorage
+
       const res = await fetch("http://localhost:5000/api/users", {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, // Kirim token untuk autentikasi
       });
+
       const data = await res.json();
       const allUsers = data.data || [];
 
+      // Pisahkan berdasarkan role
       const onlyUsers  = allUsers.filter((u) => u.role === "user");
       const onlyAdmins = allUsers.filter((u) => u.role === "admin" || u.role === "superadmin");
 
@@ -222,73 +426,208 @@ export default function KelolaUsersPage() {
       setAdmins(onlyAdmins);
       setStats({ users: onlyUsers.length, admins: onlyAdmins.length });
     } catch (err) {
-      console.log(err);
+      console.error("Gagal fetch users:", err);
     }
-  };
+  }, []);
 
+  // Panggil fetchUsers pertama kali saat komponen dimount
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // =============================================================================
   // CREATE USER
+  // Menambahkan akun baru dengan role "user".
+  // Validasi: username, email, password wajib diisi.
+  // Endpoint: POST /api/users
+  // =============================================================================
   const handleCreateUser = async () => {
+    // Validasi form — semua field harus diisi sebelum request dikirim
     if (!newUser.username || !newUser.email || !newUser.password) {
       showToast("Semua field harus diisi!", "error");
       return;
     }
-    setLoadingUser(true);
+
+    setLoadingUser(true); // Aktifkan loading di tombol
     try {
       const token = localStorage.getItem("token");
+
       const res = await fetch("http://localhost:5000/api/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        // Kirim data user baru, role dipaksa "user" agar tidak bisa diubah dari form ini
         body: JSON.stringify({ ...newUser, role: "user" }),
       });
+
       const data = await res.json();
-      console.log("CREATE USER:", data);
+
       if (res.ok) {
         showToast("User berhasil ditambahkan!", "success");
-        setNewUser({ username: "", email: "", password: "", role: "user" });
-        fetchUsers();
+        setNewUser({ username: "", email: "", password: "", role: "user" }); // Reset form
+        fetchUsers(); // Refresh daftar agar user baru muncul
       } else {
-        showToast(data.message || "Gagal tambah user", "error");
+        showToast(data.message || "Gagal menambahkan user", "error");
       }
     } catch (err) {
-      console.log(err);
+      console.error("Error create user:", err);
       showToast("Terjadi kesalahan server", "error");
     } finally {
-      setLoadingUser(false);
+      setLoadingUser(false); // Matikan loading apapun hasilnya (sukses atau gagal)
     }
   };
 
+  // =============================================================================
   // CREATE ADMIN
+  // Menambahkan akun baru dengan role "admin" atau "superadmin".
+  // Validasi: username, email, password wajib diisi.
+  // Endpoint: POST /api/users
+  // =============================================================================
   const handleCreateAdmin = async () => {
+    // Validasi form — semua field harus diisi sebelum request dikirim
     if (!newAdmin.username || !newAdmin.email || !newAdmin.password) {
       showToast("Semua field harus diisi!", "error");
       return;
     }
-    setLoadingAdmin(true);
+
+    setLoadingAdmin(true); // Aktifkan loading di tombol
     try {
       const token = localStorage.getItem("token");
+
       const res = await fetch("http://localhost:5000/api/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        // Kirim data admin baru beserta role yang sudah dipilih di dropdown
         body: JSON.stringify(newAdmin),
       });
+
       const data = await res.json();
-      console.log("CREATE ADMIN:", data);
+
       if (res.ok) {
         showToast("Admin berhasil ditambahkan!", "success");
-        setNewAdmin({ username: "", email: "", password: "", role: "admin" });
-        fetchUsers();
+        setNewAdmin({ username: "", email: "", password: "", role: "admin" }); // Reset form
+        fetchUsers(); // Refresh daftar agar admin baru muncul
       } else {
-        showToast(data.message || "Gagal tambah admin", "error");
+        showToast(data.message || "Gagal menambahkan admin", "error");
       }
     } catch (err) {
-      console.log(err);
+      console.error("Error create admin:", err);
       showToast("Terjadi kesalahan server", "error");
     } finally {
-      setLoadingAdmin(false);
+      setLoadingAdmin(false); // Matikan loading apapun hasilnya
     }
   };
 
-  // SEARCH FILTER
+  // =============================================================================
+  // OPEN EDIT MODAL
+  // Dipanggil saat tombol "Edit" diklik pada kartu user/admin.
+  // Menyimpan data user yang dipilih ke state → EditUserModal akan terbuka.
+  // =============================================================================
+  const handleOpenEdit = (userData) => {
+    setEditTarget(userData); // Simpan data user yang akan diedit
+  };
+
+  // =============================================================================
+  // SAVE EDIT (UPDATE USER)
+  // Dipanggil saat tombol "Save Changes" di modal edit diklik.
+  // Mengirim request PUT ke API dengan data yang sudah diperbarui.
+  // Password hanya dikirim jika field-nya diisi (opsional saat edit).
+  // Endpoint: PUT /api/users/:id
+  // =============================================================================
+  const handleSaveEdit = async (formData) => {
+    // Validasi — username dan email wajib ada
+    if (!formData.username || !formData.email) {
+      showToast("Username dan email wajib diisi!", "error");
+      return;
+    }
+
+    setLoadingEdit(true); // Aktifkan loading di tombol "Save Changes"
+    try {
+      const token = localStorage.getItem("token");
+
+      // Buat payload — masukkan password hanya jika user mengisinya
+      const payload = {
+        username: formData.username,
+        email:    formData.email,
+        role:     formData.role,
+        // Operator spread kondisional: password hanya ditambahkan jika tidak kosong
+        ...(formData.password ? { password: formData.password } : {}),
+      };
+
+      // Kirim PUT request ke /api/users/:id dengan ID user yang sedang diedit
+      const res = await fetch(`http://localhost:5000/api/users/${editTarget.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Data berhasil diperbarui!", "success");
+        setEditTarget(null); // Tutup modal edit
+        fetchUsers();        // Refresh daftar agar perubahan tampil
+      } else {
+        showToast(data.message || "Gagal memperbarui data", "error");
+      }
+    } catch (err) {
+      console.error("Error update user:", err);
+      showToast("Terjadi kesalahan server", "error");
+    } finally {
+      setLoadingEdit(false); // Matikan loading apapun hasilnya
+    }
+  };
+
+  // =============================================================================
+  // DELETE USER
+  // Dipanggil saat tombol "Hapus" diklik pada kartu user/admin.
+  // Menggunakan window.confirm sebagai konfirmasi sebelum menghapus.
+  // Endpoint: DELETE /api/users/:id
+  // =============================================================================
+  const handleDeleteUser = async (userData) => {
+    // Tampilkan dialog konfirmasi bawaan browser sebelum menghapus
+    const confirmed = window.confirm(
+      `Yakin ingin menghapus akun "${userData.username}"?\nAksi ini tidak bisa dibatalkan.`
+    );
+    if (!confirmed) return; // Jika user klik "Batal", hentikan proses
+
+    setLoadingDelete(userData.id); // Tandai ID user yang sedang dihapus untuk tampilkan loading
+    try {
+      const token = localStorage.getItem("token");
+
+      // Kirim DELETE request ke /api/users/:id
+      const res = await fetch(`http://localhost:5000/api/users/${userData.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Akun berhasil dihapus!", "success");
+        fetchUsers(); // Refresh daftar agar user yang dihapus tidak tampil lagi
+      } else {
+        showToast(data.message || "Gagal menghapus akun", "error");
+      }
+    } catch (err) {
+      console.error("Error delete user:", err);
+      showToast("Terjadi kesalahan server", "error");
+    } finally {
+      setLoadingDelete(null); // Reset loading delete
+    }
+  };
+
+  // ── FILTER PENCARIAN ─────────────────────────────────────────────────────────
+  // Filter daftar user dan admin secara real-time berdasarkan teks di input pencarian.
+  // Pencarian berlaku untuk username DAN email, tidak case-sensitive.
   const filteredUsers = users.filter(
     (u) =>
       u.username.toLowerCase().includes(search.toLowerCase()) ||
@@ -301,16 +640,22 @@ export default function KelolaUsersPage() {
       a.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  // ── ITEM NAVIGASI SIDEBAR ────────────────────────────────────────────────────
   const navItems = [
     { key: "dashboard", label: "Dashboard",    icon: <GridIcon />,         action: () => router.push("/superadmin/dashboard") },
     { key: "laporan",   label: "Laporan",      icon: <DocumentTextIcon />, action: () => router.push("/superadmin/laporan") },
     { key: "users",     label: "Kelola Users", icon: <UsersIcon />,        action: () => router.push("/superadmin/kelolauser") },
   ];
 
+  // =============================================================================
+  // RENDER
+  // =============================================================================
   return (
     <div className="min-h-screen bg-[#f7f3ef] flex">
 
-      {/* Toast */}
+      {/* ── TOAST NOTIFIKASI ───────────────────────────────────────────────────
+          Muncul di pojok kanan bawah, otomatis hilang setelah 3 detik.
+          Ditampilkan setelah aksi berhasil atau gagal. */}
       {toast && (
         <Toast
           message={toast.message}
@@ -319,9 +664,22 @@ export default function KelolaUsersPage() {
         />
       )}
 
-      {/* ══════════════════════════════════════
+      {/* ── EDIT USER MODAL ────────────────────────────────────────────────────
+          isOpen: true jika editTarget tidak null (ada user yang dipilih untuk diedit)
+          user: data user yang akan diedit
+          onSave: fungsi yang mengirim data ke API
+          onCancel: tutup modal tanpa menyimpan */}
+      <EditUserModal
+        isOpen={!!editTarget}
+        user={editTarget}
+        onSave={handleSaveEdit}
+        onCancel={() => setEditTarget(null)}
+        loading={loadingEdit}
+      />
+
+      {/* ════════════════════════════════════════════════════════════════════════
           SIDEBAR
-      ══════════════════════════════════════ */}
+      ════════════════════════════════════════════════════════════════════════ */}
       <aside
         className={`
           fixed top-0 left-0 h-full z-30 flex flex-col
@@ -330,7 +688,7 @@ export default function KelolaUsersPage() {
           ${sidebarOpen ? "w-64" : "w-20"}
         `}
       >
-        {/* Logo */}
+        {/* Logo & nama aplikasi */}
         <div className="flex items-center gap-3 px-5 py-6 border-b border-white/10">
           <span className="text-3xl flex-shrink-0 select-none">&#9749;</span>
           {sidebarOpen && (
@@ -345,7 +703,7 @@ export default function KelolaUsersPage() {
           )}
         </div>
 
-        {/* Admin badge */}
+        {/* Badge superadmin — versi sidebar terbuka (lebar) */}
         {sidebarOpen && (
           <div className="mx-4 mt-5 mb-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4 flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#f0d5b8] to-[#c8956b] flex items-center justify-center flex-shrink-0 text-white">
@@ -358,6 +716,7 @@ export default function KelolaUsersPage() {
           </div>
         )}
 
+        {/* Badge superadmin — versi sidebar tertutup (sempit) */}
         {!sidebarOpen && (
           <div className="flex justify-center mt-5 mb-2">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#f0d5b8] to-[#c8956b] flex items-center justify-center text-white">
@@ -366,7 +725,7 @@ export default function KelolaUsersPage() {
           </div>
         )}
 
-        {/* Nav */}
+        {/* Menu navigasi utama */}
         <nav className="flex-1 flex flex-col gap-1 px-3 mt-4">
           {navItems.map((item) => (
             <button
@@ -388,7 +747,7 @@ export default function KelolaUsersPage() {
           ))}
         </nav>
 
-        {/* Bottom: Bell + Logout */}
+        {/* Tombol notifikasi dan logout di bagian bawah sidebar */}
         <div className="px-3 pb-6 flex flex-col gap-1">
           <button
             title={!sidebarOpen ? "Notifications" : ""}
@@ -396,11 +755,13 @@ export default function KelolaUsersPage() {
           >
             <span className="relative flex-shrink-0">
               <BellIcon />
+              {/* Titik oranye kecil penanda ada notifikasi */}
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#e57c4a] rounded-full border-2 border-[#5c2d0e]" />
             </span>
             {sidebarOpen && <span>Notifications</span>}
           </button>
 
+          {/* Tombol logout: hapus token dari localStorage lalu redirect ke halaman login */}
           <button
             onClick={() => {
               localStorage.removeItem("token");
@@ -415,7 +776,7 @@ export default function KelolaUsersPage() {
           </button>
         </div>
 
-        {/* Toggle */}
+        {/* Tombol toggle buka/tutup sidebar */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="absolute -right-3 top-7 w-6 h-6 bg-[#d8b08c] rounded-full flex items-center justify-center shadow-lg hover:bg-[#b07d55] transition"
@@ -424,18 +785,20 @@ export default function KelolaUsersPage() {
         </button>
       </aside>
 
-      {/* ══════════════════════════════════════
+      {/* ════════════════════════════════════════════════════════════════════════
           MAIN CONTENT
-      ══════════════════════════════════════ */}
+          ml-64 saat sidebar terbuka, ml-20 saat sidebar tertutup
+      ════════════════════════════════════════════════════════════════════════ */}
       <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-20"} min-h-screen flex flex-col`}>
 
-        {/* TOPBAR */}
+        {/* TOPBAR: sticky supaya tetap terlihat saat halaman di-scroll */}
         <div className="sticky top-0 z-20 bg-[#f7f3ef]/80 backdrop-blur-md border-b border-[#e8d9cc] px-8 py-4 flex items-center justify-between">
           <div>
             <p className="text-xs text-[#a07a5e] font-semibold uppercase tracking-widest">Super Admin</p>
             <h2 className="text-xl font-extrabold text-[#2b1d15]">Kelola Pengguna</h2>
           </div>
 
+          {/* Input pencarian — memfilter daftar user & admin secara real-time */}
           <div className="relative hidden md:flex items-center">
             <span className="absolute left-3 text-[#a07a5e] pointer-events-none"><MagnifyingGlassIcon /></span>
             <input
@@ -450,14 +813,13 @@ export default function KelolaUsersPage() {
 
         <div className="px-8 py-8 flex-1">
 
-          {/* ── STAT CARDS ── */}
+          {/* ── STAT CARDS: menampilkan jumlah total user dan admin ─────────── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
 
-            {/* Total Users */}
+            {/* Kartu Total User */}
             <div className="group relative bg-white rounded-3xl border border-[#eee5da] shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden p-6">
               <div className="absolute inset-0 bg-gradient-to-br from-[#fdf6f0] to-white opacity-0 group-hover:opacity-100 transition-all duration-300" />
               <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-[#f0e5d8] opacity-40" />
-
               <div className="relative z-10 flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#5c2d0e] to-[#8b4a20] flex items-center justify-center shadow-md shadow-[#8b4a20]/30 flex-shrink-0 text-white">
                   <UserSingleIcon />
@@ -467,22 +829,19 @@ export default function KelolaUsersPage() {
                   <h2 className="text-5xl font-extrabold text-[#2b1d15] leading-none">{stats.users}</h2>
                 </div>
               </div>
-
               <div className="relative z-10 mt-5 h-1.5 rounded-full bg-[#f0e5d8] overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-to-r from-[#5c2d0e] to-[#c8956b]" style={{ width: "100%" }} />
               </div>
-
               <div className="relative z-10 flex items-center justify-between mt-2">
                 <p className="text-[11px] text-[#a07a5e] font-semibold">Akun terdaftar</p>
                 <span className="text-[11px] text-[#c8956b] font-bold bg-[#f0e5d8] px-2 py-0.5 rounded-full">Aktif</span>
               </div>
             </div>
 
-            {/* Total Admin */}
+            {/* Kartu Total Admin */}
             <div className="group relative bg-white rounded-3xl border border-[#eee5da] shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden p-6">
               <div className="absolute inset-0 bg-gradient-to-br from-[#eff6ff] to-white opacity-0 group-hover:opacity-100 transition-all duration-300" />
               <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-blue-50 opacity-60" />
-
               <div className="relative z-10 flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1d4ed8] to-[#3b82f6] flex items-center justify-center shadow-md shadow-blue-400/30 flex-shrink-0 text-white">
                   <ShieldCheckIcon />
@@ -492,30 +851,38 @@ export default function KelolaUsersPage() {
                   <h2 className="text-5xl font-extrabold text-[#2b1d15] leading-none">{stats.admins}</h2>
                 </div>
               </div>
-
               <div className="relative z-10 mt-5 h-1.5 rounded-full bg-blue-100 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-700"
-                  style={{ width: stats.users + stats.admins > 0 ? `${(stats.admins / (stats.users + stats.admins)) * 100}%` : "0%" }}
+                  style={{
+                    width: stats.users + stats.admins > 0
+                      ? `${(stats.admins / (stats.users + stats.admins)) * 100}%`
+                      : "0%",
+                  }}
                 />
               </div>
-
               <div className="relative z-10 flex items-center justify-between mt-2">
                 <p className="text-[11px] text-[#a07a5e] font-semibold">Admin &amp; Superadmin</p>
                 <span className="text-[11px] text-blue-600 font-bold bg-blue-100 px-2 py-0.5 rounded-full">
-                  {stats.users + stats.admins > 0 ? Math.round((stats.admins / (stats.users + stats.admins)) * 100) : 0}% dari total
+                  {stats.users + stats.admins > 0
+                    ? Math.round((stats.admins / (stats.users + stats.admins)) * 100)
+                    : 0}% dari total
                 </span>
               </div>
             </div>
           </div>
 
-          {/* ── CONTENT GRID ── */}
+          {/* ── CONTENT GRID: dua kolom (User Management & Admin Management) ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            {/* ── USER MANAGEMENT ── */}
+            {/* ══════════════════════════════════════════════════════════════════
+                USER MANAGEMENT CARD
+            ══════════════════════════════════════════════════════════════════ */}
             <div className="bg-white rounded-3xl border border-[#eee5da] shadow-sm overflow-hidden flex flex-col">
+              {/* Garis warna coklat di atas kartu */}
               <div className="h-1.5 w-full bg-gradient-to-r from-[#5c2d0e] via-[#c8956b] to-[#f0d5b8]" />
 
+              {/* Header kartu */}
               <div className="px-6 py-5 border-b border-[#f0e8df] flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-extrabold text-[#2b1d15]">User Management</h3>
@@ -526,7 +893,7 @@ export default function KelolaUsersPage() {
                 </span>
               </div>
 
-              {/* Form tambah user */}
+              {/* Form tambah user baru */}
               <div className="px-6 py-5 border-b border-[#f0e8df] space-y-4">
                 <p className="text-[11px] text-[#a07a5e] font-bold uppercase tracking-wider">Tambah User Baru</p>
 
@@ -554,31 +921,20 @@ export default function KelolaUsersPage() {
                   icon={<LockClosedIcon />}
                 />
 
+                {/* Tombol submit tambah user */}
                 <button
                   onClick={handleCreateUser}
                   disabled={loadingUser}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#5c2d0e] to-[#8b4a20] text-white py-3 rounded-2xl font-bold text-sm shadow-lg shadow-[#8b4a20]/25 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
                 >
-                  {loadingUser ? (
-                    <>
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Menyimpan...
-                    </>
-                  ) : (
-                    <>
-                      <PlusCircleIcon />
-                      Tambah User Baru
-                    </>
-                  )}
+                  {loadingUser ? <><Spinner /> Menyimpan...</> : <><PlusCircleIcon /> Tambah User Baru</>}
                 </button>
               </div>
 
-              {/* User list */}
+              {/* Daftar user — scrollable, tinggi maksimal 320px */}
               <div className="flex-1 overflow-y-auto p-6 space-y-3 max-h-80">
                 {filteredUsers.length === 0 ? (
+                  // Tampil jika tidak ada user atau tidak ada hasil pencarian
                   <div className="flex flex-col items-center justify-center py-10 text-[#b89f8d]">
                     <div className="w-10 h-10 rounded-xl bg-[#f0e8df] flex items-center justify-center text-[#c8956b] mx-auto mb-2">
                       <UserSingleIcon />
@@ -589,8 +945,9 @@ export default function KelolaUsersPage() {
                   filteredUsers.map((u) => (
                     <div
                       key={u.id}
-                      className="flex items-center justify-between p-4 bg-[#fdf9f6] hover:bg-[#f7f0e9] rounded-2xl border border-[#f0e8df] hover:border-[#e8d0bb] transition-all duration-200 group"
+                      className="flex items-center justify-between p-4 bg-[#fdf9f6] hover:bg-[#f7f0e9] rounded-2xl border border-[#f0e8df] hover:border-[#e8d0bb] transition-all duration-200"
                     >
+                      {/* Info: avatar, nama, email */}
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar name={u.username} size={38} />
                         <div className="min-w-0">
@@ -602,13 +959,25 @@ export default function KelolaUsersPage() {
                         </div>
                       </div>
 
+                      {/* Aksi: badge role + tombol Edit + tombol Hapus */}
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                         <RoleBadge role={u.role} />
-                        <button className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 text-blue-500 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center justify-center transition-all duration-200">
-                          <PencilIcon />
+
+                        {/* Tombol Edit: membuka EditUserModal dengan data user ini */}
+                        <button
+                          onClick={() => handleOpenEdit(u)}
+                          className="rounded-xl bg-[#edf4ff] text-blue-700 px-3 py-1.5 text-xs font-bold hover:bg-[#dbeafe] transition-all duration-200"
+                        >
+                          Edit
                         </button>
-                        <button className="w-8 h-8 rounded-xl bg-red-50 border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center transition-all duration-200">
-                          <TrashIcon />
+
+                        {/* Tombol Hapus: memanggil handleDeleteUser dengan data user ini */}
+                        <button
+                          onClick={() => handleDeleteUser(u)}
+                          disabled={loadingDelete === u.id}
+                          className="rounded-xl bg-red-50 text-red-600 px-3 py-1.5 text-xs font-bold hover:bg-red-100 transition-all duration-200 disabled:opacity-60 flex items-center gap-1"
+                        >
+                          {loadingDelete === u.id ? <Spinner /> : "Hapus"}
                         </button>
                       </div>
                     </div>
@@ -617,10 +986,14 @@ export default function KelolaUsersPage() {
               </div>
             </div>
 
-            {/* ── ADMIN MANAGEMENT ── */}
+            {/* ══════════════════════════════════════════════════════════════════
+                ADMIN MANAGEMENT CARD
+            ══════════════════════════════════════════════════════════════════ */}
             <div className="bg-white rounded-3xl border border-[#eee5da] shadow-sm overflow-hidden flex flex-col">
+              {/* Garis warna biru di atas kartu */}
               <div className="h-1.5 w-full bg-gradient-to-r from-[#1d4ed8] via-[#3b82f6] to-[#93c5fd]" />
 
+              {/* Header kartu */}
               <div className="px-6 py-5 border-b border-[#f0e8df] flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-extrabold text-[#2b1d15]">Admin Management</h3>
@@ -631,7 +1004,7 @@ export default function KelolaUsersPage() {
                 </span>
               </div>
 
-              {/* Form tambah admin */}
+              {/* Form tambah admin baru */}
               <div className="px-6 py-5 border-b border-[#f0e8df] space-y-4">
                 <p className="text-[11px] text-[#a07a5e] font-bold uppercase tracking-wider">Tambah Admin Baru</p>
 
@@ -659,7 +1032,7 @@ export default function KelolaUsersPage() {
                   icon={<LockClosedIcon />}
                 />
 
-                {/* Role selector */}
+                {/* Dropdown pilihan role untuk admin baru */}
                 <div>
                   <label className="block text-xs font-bold text-[#2b1d15] mb-2 uppercase tracking-wider">Role</label>
                   <div className="relative bg-[#fdf9f6] border border-[#e8d9cc] focus-within:border-[#c8956b] focus-within:ring-2 focus-within:ring-[#c8956b]/15 rounded-xl px-4 py-3 transition-all duration-200">
@@ -678,31 +1051,20 @@ export default function KelolaUsersPage() {
                   </div>
                 </div>
 
+                {/* Tombol submit tambah admin */}
                 <button
                   onClick={handleCreateAdmin}
                   disabled={loadingAdmin}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#1d4ed8] to-[#3b82f6] text-white py-3 rounded-2xl font-bold text-sm shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
                 >
-                  {loadingAdmin ? (
-                    <>
-                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Menyimpan...
-                    </>
-                  ) : (
-                    <>
-                      <PlusCircleIcon />
-                      Tambah Admin Baru
-                    </>
-                  )}
+                  {loadingAdmin ? <><Spinner /> Menyimpan...</> : <><PlusCircleIcon /> Tambah Admin Baru</>}
                 </button>
               </div>
 
-              {/* Admin list */}
+              {/* Daftar admin — scrollable, tinggi maksimal 320px */}
               <div className="flex-1 overflow-y-auto p-6 space-y-3 max-h-80">
                 {filteredAdmins.length === 0 ? (
+                  // Tampil jika tidak ada admin atau tidak ada hasil pencarian
                   <div className="flex flex-col items-center justify-center py-10 text-[#b89f8d]">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-400 mx-auto mb-2">
                       <ShieldCheckIcon />
@@ -713,8 +1075,9 @@ export default function KelolaUsersPage() {
                   filteredAdmins.map((a) => (
                     <div
                       key={a.id}
-                      className="flex items-center justify-between p-4 bg-[#fdf9f6] hover:bg-[#f0f6ff] rounded-2xl border border-[#f0e8df] hover:border-blue-200 transition-all duration-200 group"
+                      className="flex items-center justify-between p-4 bg-[#fdf9f6] hover:bg-[#f0f6ff] rounded-2xl border border-[#f0e8df] hover:border-blue-200 transition-all duration-200"
                     >
+                      {/* Info: avatar, nama, email */}
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar name={a.username} size={38} />
                         <div className="min-w-0">
@@ -726,13 +1089,25 @@ export default function KelolaUsersPage() {
                         </div>
                       </div>
 
+                      {/* Aksi: badge role + tombol Edit + tombol Hapus */}
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                         <RoleBadge role={a.role} />
-                        <button className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 text-blue-500 hover:bg-blue-500 hover:text-white hover:border-blue-500 flex items-center justify-center transition-all duration-200">
-                          <PencilIcon />
+
+                        {/* Tombol Edit: membuka EditUserModal dengan data admin ini */}
+                        <button
+                          onClick={() => handleOpenEdit(a)}
+                          className="rounded-xl bg-[#edf4ff] text-blue-700 px-3 py-1.5 text-xs font-bold hover:bg-[#dbeafe] transition-all duration-200"
+                        >
+                          Edit
                         </button>
-                        <button className="w-8 h-8 rounded-xl bg-red-50 border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center transition-all duration-200">
-                          <TrashIcon />
+
+                        {/* Tombol Hapus: memanggil handleDeleteUser dengan data admin ini */}
+                        <button
+                          onClick={() => handleDeleteUser(a)}
+                          disabled={loadingDelete === a.id}
+                          className="rounded-xl bg-red-50 text-red-600 px-3 py-1.5 text-xs font-bold hover:bg-red-100 transition-all duration-200 disabled:opacity-60 flex items-center gap-1"
+                        >
+                          {loadingDelete === a.id ? <Spinner /> : "Hapus"}
                         </button>
                       </div>
                     </div>
