@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 
 const ITEMS_PER_PAGE = 6;
 
+const DEFAULT_APPROVE_REASON =
+  "Laporan Anda telah diverifikasi dan akan segera ditindak lanjuti oleh petugas.";
+const DEFAULT_REJECT_REASON =
+  "Laporan yang Anda lampirkan kurang jelas sehingga laporan tidak bisa terverifikasi.";
+
 // ── Heroicons inline SVG ────────────────────────────────────────────────────
 
 const GridIcon = () => (
@@ -106,6 +111,12 @@ const CalendarIcon = () => (
   </svg>
 );
 
+const XMarkIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
 // ── Status Badge ────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const map = {
@@ -141,6 +152,88 @@ function Avatar({ name = "?", size = 32 }) {
   );
 }
 
+// ── Reason Confirmation Modal ───────────────────────────────────────────────
+function ReasonModal({ type, onConfirm, onCancel }) {
+  const isApprove = type === "approved";
+  const [reason, setReason] = useState(
+    isApprove ? DEFAULT_APPROVE_REASON : DEFAULT_REJECT_REASON
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header */}
+        <div
+          className={`px-6 py-5 flex items-center justify-between ${
+            isApprove
+              ? "bg-gradient-to-r from-green-500 to-emerald-400"
+              : "bg-gradient-to-r from-red-500 to-red-400"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white">
+              {isApprove ? <CheckCircleIcon /> : <XCircleIcon />}
+            </div>
+            <div>
+              <h3 className="text-white font-extrabold text-base">
+                {isApprove ? "Setujui Laporan" : "Tolak Laporan"}
+              </h3>
+              <p className="text-white/80 text-xs">
+                {isApprove
+                  ? "Laporan akan diverifikasi"
+                  : "Laporan akan ditolak"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onCancel}
+            className="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition"
+          >
+            <XMarkIcon />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5">
+          <label className="block text-xs font-bold text-[#5c2d0e] uppercase tracking-wider mb-2">
+            Alasan / Pesan untuk Pelapor
+          </label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={4}
+            className="w-full px-4 py-3 rounded-2xl border border-[#e8d9cc] bg-[#fdf9f6] text-sm text-[#3b2f2f] outline-none focus:ring-2 focus:ring-[#c8956b]/40 focus:border-[#c8956b] resize-none transition"
+            placeholder="Tulis alasan untuk pelapor..."
+          />
+          <p className="text-[10px] text-[#b89f8d] mt-1.5">
+            Pesan ini akan ditampilkan kepada pengguna di halaman laporan mereka.
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 pb-6 flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 h-11 rounded-2xl border border-[#e8d9cc] bg-white text-[#7a5c44] text-sm font-bold hover:bg-[#f7f3ef] transition"
+          >
+            Batal
+          </button>
+          <button
+            onClick={() => onConfirm(reason)}
+            className={`flex-1 h-11 rounded-2xl text-white text-sm font-bold transition shadow-md ${
+              isApprove
+                ? "bg-gradient-to-r from-green-500 to-emerald-400 hover:opacity-90 shadow-green-200"
+                : "bg-gradient-to-r from-red-500 to-red-400 hover:opacity-90 shadow-red-200"
+            }`}
+          >
+            {isApprove ? "Ya, Setujui" : "Ya, Tolak"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 
 export default function KelolaLaporanPage() {
@@ -154,8 +247,11 @@ export default function KelolaLaporanPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeMenu, setActiveMenu] = useState("laporan");
 
+  // Modal state
+  const [reasonModal, setReasonModal] = useState(null); // { type: "approved"|"rejected", reportId }
+
   /* =========================
-     FETCH REPORTS (FIXED)
+     FETCH REPORTS
   ========================= */
   const fetchReports = async () => {
     try {
@@ -175,50 +271,45 @@ export default function KelolaLaporanPage() {
     }
   };
 
-  /* =========================
-     USE EFFECT
-  ========================= */
   useEffect(() => {
     fetchReports();
   }, []);
 
   /* =========================
-     APPROVE
+     OPEN APPROVE MODAL
   ========================= */
-  const handleApprove = async (id) => {
-    try {
-      const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5000/api/posts/status/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: "approved" }),
-      });
-      fetchReports();
-    } catch (err) {
-      console.log("APPROVE ERROR:", err);
-    }
+  const openApproveModal = (id) => {
+    setReasonModal({ type: "approved", reportId: id });
   };
 
   /* =========================
-     REJECT
+     OPEN REJECT MODAL
   ========================= */
-  const handleReject = async (id) => {
+  const openRejectModal = (id) => {
+    setReasonModal({ type: "rejected", reportId: id });
+  };
+
+  /* =========================
+     CONFIRM (with reason)
+  ========================= */
+  const handleConfirm = async (reason) => {
+    if (!reasonModal) return;
+    const { type, reportId } = reasonModal;
+    setReasonModal(null);
+
     try {
       const token = localStorage.getItem("token");
-      await fetch(`http://localhost:5000/api/posts/status/${id}`, {
+      await fetch(`http://localhost:5000/api/posts/status/${reportId}`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: "rejected" }),
+        body: JSON.stringify({ status: type, reason }),
       });
       fetchReports();
     } catch (err) {
-      console.log("REJECT ERROR:", err);
+      console.log("UPDATE STATUS ERROR:", err);
     }
   };
 
@@ -262,6 +353,15 @@ export default function KelolaLaporanPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f3ef] flex">
+
+      {/* ── REASON MODAL ── */}
+      {reasonModal && (
+        <ReasonModal
+          type={reasonModal.type}
+          onConfirm={handleConfirm}
+          onCancel={() => setReasonModal(null)}
+        />
+      )}
 
       {/* ══════════════════════════════════════
           SIDEBAR
@@ -346,7 +446,6 @@ export default function KelolaLaporanPage() {
 
           <button
             onClick={() => {
-              console.log("[LOGOUT] Logging out...");
               localStorage.removeItem("token");
               localStorage.removeItem("user");
               router.push("/login");
@@ -380,7 +479,6 @@ export default function KelolaLaporanPage() {
             <h2 className="text-xl font-extrabold text-[#2b1d15]">Kelola Laporan</h2>
           </div>
 
-          {/* Search + user chip */}
           <div className="flex items-center gap-3">
             <div className="relative hidden md:flex items-center">
               <span className="absolute left-3 text-[#a07a5e] pointer-events-none"><MagnifyingGlassIcon /></span>
@@ -433,14 +531,12 @@ export default function KelolaLaporanPage() {
           {/* ── TABLE CARD ── */}
           <div className="bg-white rounded-3xl border border-[#eee5da] shadow-sm overflow-hidden">
 
-            {/* Card top: title + filter tabs */}
             <div className="px-6 pt-5 pb-4 border-b border-[#f0e8df] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-base font-extrabold text-[#2b1d15]">Daftar Laporan</h3>
                 <p className="text-xs text-[#a07a5e] mt-0.5">{filtered.length} laporan ditemukan</p>
               </div>
 
-              {/* Filter tabs */}
               <div className="flex gap-2 flex-wrap">
                 {FILTER_TABS.map((f) => (
                   <button
@@ -482,10 +578,7 @@ export default function KelolaLaporanPage() {
                 <thead>
                   <tr className="bg-[#fdf9f6] border-b border-[#f0e8df]">
                     {TABLE_HEADS.map((h) => (
-                      <th
-                        key={h}
-                        className="px-5 py-3.5 text-left text-[11px] font-bold text-[#a07a5e] uppercase tracking-wider whitespace-nowrap"
-                      >
+                      <th key={h} className="px-5 py-3.5 text-left text-[11px] font-bold text-[#a07a5e] uppercase tracking-wider whitespace-nowrap">
                         {h}
                       </th>
                     ))}
@@ -494,10 +587,7 @@ export default function KelolaLaporanPage() {
 
                 <tbody className="divide-y divide-[#f7f3ef]">
                   {paged.map((r, i) => (
-                    <tr
-                      key={r.id}
-                      className="group hover:bg-[#fdf6f0] transition-colors duration-150"
-                    >
+                    <tr key={r.id} className="group hover:bg-[#fdf6f0] transition-colors duration-150">
                       {/* No */}
                       <td className="px-5 py-4 text-xs font-bold text-[#a07a5e]">
                         {(page - 1) * ITEMS_PER_PAGE + i + 1}
@@ -508,6 +598,12 @@ export default function KelolaLaporanPage() {
                         <p className="font-bold text-[#2b1d15] text-xs truncate">
                           {r.title || r.header || "-"}
                         </p>
+                        {/* Show existing reason if any */}
+                        {r.reason && (
+                          <p className="text-[10px] text-[#a07a5e] truncate mt-0.5 max-w-[160px]" title={r.reason}>
+                            💬 {r.reason}
+                          </p>
+                        )}
                       </td>
 
                       {/* Pelapor */}
@@ -560,14 +656,14 @@ export default function KelolaLaporanPage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleApprove(r.id)}
+                            onClick={() => openApproveModal(r.id)}
                             className="w-8 h-8 rounded-xl bg-green-50 border border-green-100 text-green-500 hover:bg-green-500 hover:text-white hover:border-green-500 flex items-center justify-center transition-all duration-200"
                             title="Approve"
                           >
                             <CheckCircleIcon />
                           </button>
                           <button
-                            onClick={() => handleReject(r.id)}
+                            onClick={() => openRejectModal(r.id)}
                             className="w-8 h-8 rounded-xl bg-red-50 border border-red-100 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center transition-all duration-200"
                             title="Reject"
                           >
@@ -595,7 +691,7 @@ export default function KelolaLaporanPage() {
               </table>
             </div>
 
-            {/* TABLE FOOTER: pagination */}
+            {/* PAGINATION */}
             <div className="px-6 py-4 border-t border-[#f0e8df] bg-[#fdf9f6] flex items-center justify-between gap-4">
               <p className="text-xs text-[#a07a5e] font-semibold">
                 Menampilkan{" "}
@@ -608,7 +704,6 @@ export default function KelolaLaporanPage() {
               </p>
 
               <div className="flex items-center gap-1.5">
-                {/* Prev */}
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -621,7 +716,6 @@ export default function KelolaLaporanPage() {
                   <ChevronLeftSmallIcon />
                 </button>
 
-                {/* Page numbers */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
                   <button
                     key={p}
@@ -636,7 +730,6 @@ export default function KelolaLaporanPage() {
                   </button>
                 ))}
 
-                {/* Next */}
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}

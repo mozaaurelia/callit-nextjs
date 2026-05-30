@@ -6,12 +6,15 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Search,
-  Filter,
   MapPin,
   Calendar,
   Send,
   MessageCircle,
   Trash2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Info,
 } from "lucide-react";
 
 // ── HEROICONS SIDEBAR ─────────────────────────────────────
@@ -56,25 +59,103 @@ const ChevronLeftIcon = ({ rotated }) => (
 
 const StatusBadge = ({ status }) => {
   const styles = {
-    approved:
-      "bg-emerald-100 text-emerald-700 border border-emerald-200",
-    rejected:
-      "bg-red-100 text-red-700 border border-red-200",
-    pending:
-      "bg-amber-100 text-amber-700 border border-amber-200",
+    approved: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+    rejected: "bg-red-100 text-red-700 border border-red-200",
+    pending:  "bg-amber-100 text-amber-700 border border-amber-200",
   };
-
   return (
-    <span
-      className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-        styles[status?.toLowerCase()] ||
-        "bg-gray-200 text-gray-600"
-      }`}
-    >
+    <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${styles[status?.toLowerCase()] || "bg-gray-200 text-gray-600"}`}>
       {status}
     </span>
   );
 };
+
+// ── Admin Reason Banner ────────────────────────────────────
+const FALLBACK_APPROVED_REASON =
+  "Laporan Anda telah diverifikasi dan akan segera ditindak lanjuti oleh petugas.";
+const FALLBACK_REJECTED_REASON =
+  "Laporan yang Anda lampirkan kurang jelas sehingga laporan tidak bisa terverifikasi.";
+
+function ReasonBanner({ status, reason }) {
+  const isApproved = status?.toLowerCase() === "approved";
+  const isRejected = status?.toLowerCase() === "rejected";
+
+  if (!isApproved && !isRejected) return null;
+
+  const displayReason = reason || (isApproved ? FALLBACK_APPROVED_REASON : FALLBACK_REJECTED_REASON);
+
+  if (isApproved) {
+    return (
+      <div className="mx-5 mb-4 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3">
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
+          <CheckCircle size={15} className="text-emerald-600" />
+        </div>
+        <div>
+          <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide mb-0.5">
+            Pesan dari Admin
+          </p>
+          <p className="text-xs text-emerald-800 leading-relaxed">{displayReason}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-5 mb-4 flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+        <XCircle size={15} className="text-red-500" />
+      </div>
+      <div>
+        <p className="text-[11px] font-bold text-red-600 uppercase tracking-wide mb-0.5">
+          Alasan Penolakan
+        </p>
+        <p className="text-xs text-red-700 leading-relaxed">{displayReason}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Reason Banner for Modal ────────────────────────────────
+function ModalReasonBanner({ status, reason }) {
+  if (!reason) return null;
+
+  const isApproved = status?.toLowerCase() === "approved";
+  const isRejected = status?.toLowerCase() === "rejected";
+
+  if (!isApproved && !isRejected) return null;
+
+  if (isApproved) {
+    return (
+      <div className="flex items-start gap-4 bg-emerald-50 border border-emerald-200 rounded-3xl p-5">
+        <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center">
+          <CheckCircle size={20} className="text-emerald-600" />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-emerald-700 uppercase tracking-widest mb-1">
+            ✅ Laporan Disetujui — Pesan dari Admin
+          </p>
+          <p className="text-sm text-emerald-800 leading-relaxed">{reason}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-4 bg-red-50 border border-red-200 rounded-3xl p-5">
+      <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center">
+        <XCircle size={20} className="text-red-500" />
+      </div>
+      <div>
+        <p className="text-xs font-bold text-red-600 uppercase tracking-widest mb-1">
+          ❌ Laporan Ditolak — Alasan dari Admin
+        </p>
+        <p className="text-sm text-red-700 leading-relaxed">{reason}</p>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
 
 export default function MyReportsPage() {
   const router = useRouter();
@@ -86,16 +167,12 @@ export default function MyReportsPage() {
 
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [selectedReport, setSelectedReport] =
-    useState(null);
-  const [chatMessage, setChatMessage] =
-    useState("");
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [chatMessage, setChatMessage] = useState("");
   const [chats, setChats] = useState([]);
 
   const [loading, setLoading] = useState(true);
-
-  const [sidebarOpen, setSidebarOpen] =
-    useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // =========================
   // CEK LOGIN + ROLE USER
@@ -111,7 +188,6 @@ export default function MyReportsPage() {
 
     try {
       const parsedUser = JSON.parse(userData);
-
       if (parsedUser.role !== "user") {
         router.push("/login");
         return;
@@ -119,21 +195,14 @@ export default function MyReportsPage() {
 
       setUser(parsedUser);
 
-      const savedProfile =
-        localStorage.getItem(
-          `profileImage_${parsedUser.id}`
-        );
-
-      if (savedProfile)
-        setProfileImage(savedProfile);
+      const savedProfile = localStorage.getItem(`profileImage_${parsedUser.id}`);
+      if (savedProfile) setProfileImage(savedProfile);
 
       fetchReports(token);
     } catch (err) {
       console.log(err);
-
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-
       router.push("/login");
     }
   }, []);
@@ -143,14 +212,9 @@ export default function MyReportsPage() {
   // =========================
   const fetchReports = async (token) => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/posts",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/posts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const data = await response.json();
 
@@ -160,18 +224,9 @@ export default function MyReportsPage() {
         return;
       }
 
-      const safeData = Array.isArray(data)
-        ? data
-        : [];
-
-      const user = JSON.parse(
-        localStorage.getItem("user")
-      );
-
-      const myReports = safeData.filter(
-        (item) => item.user_id === user.id
-      );
-
+      const safeData = Array.isArray(data) ? data : [];
+      const user = JSON.parse(localStorage.getItem("user"));
+      const myReports = safeData.filter((item) => item.user_id === user.id);
       setReports(myReports);
     } catch (err) {
       console.log(err);
@@ -186,74 +241,42 @@ export default function MyReportsPage() {
   // =========================
   const handleDelete = async (id) => {
     try {
-      const confirmDelete = confirm(
-        "Yakin ingin menghapus laporan?"
-      );
-
+      const confirmDelete = confirm("Yakin ingin menghapus laporan?");
       if (!confirmDelete) return;
 
       const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `http://localhost:5000/api/posts/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`http://localhost:5000/api/posts/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const data = await response.json();
-
       if (!response.ok) {
-        alert(
-          data.message || "Gagal menghapus laporan"
-        );
+        alert(data.message || "Gagal menghapus laporan");
         return;
       }
 
-      setReports(
-        reports.filter((item) => item.id !== id)
-      );
-
+      setReports(reports.filter((item) => item.id !== id));
       setSelectedReport(null);
-
       alert("Laporan berhasil dihapus");
     } catch (err) {
       console.log(err);
-
       alert("Terjadi kesalahan");
     }
   };
 
   // =========================
-  // SEARCH + FILTER BERFUNGSI
+  // SEARCH + FILTER
   // =========================
-  const filteredReports = (
-    Array.isArray(reports) ? reports : []
-  ).filter((report) => {
+  const filteredReports = (Array.isArray(reports) ? reports : []).filter((report) => {
     const query = search.toLowerCase();
-
     const matchesSearch =
-      report.header
-        ?.toLowerCase()
-        .includes(query) ||
-      report.body
-        ?.toLowerCase()
-        .includes(query) ||
-      report.location
-        ?.toLowerCase()
-        .includes(query) ||
-      report.status
-        ?.toLowerCase()
-        .includes(query);
-
+      report.header?.toLowerCase().includes(query) ||
+      report.body?.toLowerCase().includes(query) ||
+      report.location?.toLowerCase().includes(query) ||
+      report.status?.toLowerCase().includes(query);
     const matchesFilter =
-      filter === "All" ||
-      report.status?.toLowerCase() ===
-        filter.toLowerCase();
-
+      filter === "All" || report.status?.toLowerCase() === filter.toLowerCase();
     return matchesSearch && matchesFilter;
   });
 
@@ -263,23 +286,11 @@ export default function MyReportsPage() {
   const fetchChats = async (reportId) => {
     try {
       const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `http://localhost:5000/api/chats/${reportId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      const response = await fetch(`http://localhost:5000/api/chats/${reportId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
-
-      if (!response.ok) {
-        console.log(data.message);
-        return;
-      }
-
+      if (!response.ok) { console.log(data.message); return; }
       setChats(data);
     } catch (err) {
       console.log(err);
@@ -292,35 +303,15 @@ export default function MyReportsPage() {
   const sendMessage = async () => {
     try {
       if (!chatMessage.trim()) return;
-
       const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        "http://localhost:5000/api/chats",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            public_report_id:
-              selectedReport.id,
-            message: chatMessage,
-          }),
-        }
-      );
-
+      const response = await fetch("http://localhost:5000/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ public_report_id: selectedReport.id, message: chatMessage }),
+      });
       const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.message);
-        return;
-      }
-
+      if (!response.ok) { alert(data.message); return; }
       setChatMessage("");
-
       fetchChats(selectedReport.id);
     } catch (err) {
       console.log(err);
@@ -333,7 +324,6 @@ export default function MyReportsPage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
     router.push("/login");
   };
 
@@ -342,22 +332,13 @@ export default function MyReportsPage() {
   // =========================
   const handleProfileUpload = (e) => {
     const file = e.target.files[0];
-
     if (!file) return;
-
     const reader = new FileReader();
-
     reader.onloadend = () => {
       const imageBase64 = reader.result;
-
       setProfileImage(imageBase64);
-
-      localStorage.setItem(
-        `profileImage_${user.id}`,
-        imageBase64
-      );
+      localStorage.setItem(`profileImage_${user.id}`, imageBase64);
     };
-
     reader.readAsDataURL(file);
   };
 
@@ -373,34 +354,10 @@ export default function MyReportsPage() {
   }
 
   const navItems = [
-    {
-      key: "home",
-      label: "Home",
-      icon: <HomeIcon />,
-      action: () =>
-        router.push("/user/homepage"),
-    },
-    {
-      key: "create",
-      label: "Create Report",
-      icon: <PlusCircleIcon />,
-      action: () =>
-        router.push("/user/createreport"),
-    },
-    {
-      key: "reports",
-      label: "My Reports",
-      icon: <DocumentTextIcon />,
-      action: () =>
-        router.push("/user/myreport"),
-    },
-    {
-      key: "profile",
-      label: "Profile",
-      icon: <UserCircleIcon />,
-      action: () =>
-        router.push("/user/profile"),
-    },
+    { key: "home",    label: "Home",          icon: <HomeIcon />,         action: () => router.push("/user/homepage") },
+    { key: "create",  label: "Create Report", icon: <PlusCircleIcon />,   action: () => router.push("/user/createreport") },
+    { key: "reports", label: "My Reports",    icon: <DocumentTextIcon />, action: () => router.push("/user/myreport") },
+    { key: "profile", label: "Profile",       icon: <UserCircleIcon />,   action: () => router.push("/user/profile") },
   ];
 
   return (
@@ -408,16 +365,13 @@ export default function MyReportsPage() {
 
       {/* SIDEBAR */}
       <aside
-        className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-linear-to-b from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] text-white transition-all duration-300 ${
+        className={`fixed top-0 left-0 h-full z-30 flex flex-col bg-gradient-to-b from-[#5c2d0e] via-[#7a3f1c] to-[#c8956b] text-white transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-20"
         }`}
       >
-
         <div className="flex items-center gap-3 px-5 py-6 border-b border-white/10">
           {sidebarOpen && (
-            <h1 className="text-2xl font-extrabold text-[#f0d5b8]">
-              Call It!
-            </h1>
+            <h1 className="text-2xl font-extrabold text-[#f0d5b8]">Call It!</h1>
           )}
         </div>
 
@@ -425,43 +379,21 @@ export default function MyReportsPage() {
         {sidebarOpen ? (
           <div className="mx-4 mt-5 rounded-2xl bg-white/10 p-4 flex items-center gap-3">
             <img
-              src={
-                profileImage
-                  ? profileImage
-                  : `https://ui-avatars.com/api/?name=${user.username}&background=c8956b&color=fff`
-              }
+              src={profileImage || `https://ui-avatars.com/api/?name=${user.username}&background=c8956b&color=fff`}
               alt="profile"
               className="w-11 h-11 rounded-full object-cover border-2 border-[#c8956b]"
-              onClick={() =>
-                fileInputRef.current.click()
-              }
+              onClick={() => fileInputRef.current.click()}
             />
-
             <div>
-              <p className="text-sm font-bold">
-                {user.username}
-              </p>
-
-              <p className="text-xs text-[#e7c9ae]">
-                User Account
-              </p>
+              <p className="text-sm font-bold">{user.username}</p>
+              <p className="text-xs text-[#e7c9ae]">User Account</p>
             </div>
-
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleProfileUpload}
-              className="hidden"
-            />
+            <input type="file" ref={fileInputRef} onChange={handleProfileUpload} className="hidden" />
           </div>
         ) : (
           <div className="flex justify-center mt-5">
             <img
-              src={
-                profileImage
-                  ? profileImage
-                  : `https://ui-avatars.com/api/?name=${user.username}&background=c8956b&color=fff`
-              }
+              src={profileImage || `https://ui-avatars.com/api/?name=${user.username}&background=c8956b&color=fff`}
               alt="profile"
               className="w-10 h-10 rounded-full object-cover border-2 border-[#c8956b]"
             />
@@ -478,17 +410,10 @@ export default function MyReportsPage() {
                 item.key === "reports"
                   ? "bg-[#c8956b] text-white"
                   : "text-[#f3d7bf] hover:bg-white/10"
-              } ${
-                !sidebarOpen
-                  ? "justify-center"
-                  : ""
-              }`}
+              } ${!sidebarOpen ? "justify-center" : ""}`}
             >
               {item.icon}
-
-              {sidebarOpen && (
-                <span>{item.label}</span>
-              )}
+              {sidebarOpen && <span>{item.label}</span>}
             </button>
           ))}
         </nav>
@@ -498,66 +423,40 @@ export default function MyReportsPage() {
           <button
             onClick={handleLogout}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[#ffb088] hover:bg-[#3d2718] transition ${
-              !sidebarOpen
-                ? "justify-center"
-                : ""
+              !sidebarOpen ? "justify-center" : ""
             }`}
           >
             <ArrowRightOnRectangleIcon />
-
-            {sidebarOpen && (
-              <span>Logout</span>
-            )}
+            {sidebarOpen && <span>Logout</span>}
           </button>
         </div>
 
         {/* TOGGLE */}
         <button
-          onClick={() =>
-            setSidebarOpen(!sidebarOpen)
-          }
+          onClick={() => setSidebarOpen(!sidebarOpen)}
           className="absolute -right-3 top-7 w-6 h-6 bg-[#d8b08c] rounded-full flex items-center justify-center shadow-lg"
         >
-          <ChevronLeftIcon
-            rotated={!sidebarOpen}
-          />
+          <ChevronLeftIcon rotated={!sidebarOpen} />
         </button>
       </aside>
 
       {/* MAIN */}
-      <main
-        className={`flex-1 transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-20"
-        }`}
-      >
+      <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-20"}`}>
 
         {/* TOPBAR */}
         <div className="sticky top-0 z-20 bg-[#f7f3ef]/80 backdrop-blur-md border-b border-[#eadfd4] px-8 py-5 flex items-center justify-between">
-
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-[#a07a5e]">
-              My Reports
-            </p>
-
-            <h1 className="text-2xl font-extrabold text-[#2b1d15]">
-              Kelola laporan kamu ✨
-            </h1>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#a07a5e]">My Reports</p>
+            <h1 className="text-2xl font-extrabold text-[#2b1d15]">Kelola laporan kamu ✨</h1>
           </div>
 
-          {/* SEARCH BAR */}
-          <div className="hidden md:flex items-center bg-white border border-[#eadfd4] rounded-2xl px-4 py-3 shadow-sm w-82.5">
-            <Search
-              size={18}
-              className="text-[#a07a5e]"
-            />
-
+          <div className="hidden md:flex items-center bg-white border border-[#eadfd4] rounded-2xl px-4 py-3 shadow-sm w-72">
+            <Search size={18} className="text-[#a07a5e]" />
             <input
               type="text"
               placeholder="Cari laporan..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
+              onChange={(e) => setSearch(e.target.value)}
               className="flex-1 ml-3 bg-transparent outline-none text-sm"
             />
           </div>
@@ -567,18 +466,13 @@ export default function MyReportsPage() {
 
           {/* FILTER */}
           <div className="flex flex-wrap gap-3 mb-8">
-            {[
-              "All",
-              "Pending",
-              "Approved",
-              "Rejected",
-            ].map((tab) => (
+            {["All", "Pending", "Approved", "Rejected"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
                 className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all ${
                   filter === tab
-                    ? "bg-linear-to-r from-[#6f4324] to-[#8a5a39] text-white shadow-lg"
+                    ? "bg-gradient-to-r from-[#6f4324] to-[#8a5a39] text-white shadow-lg"
                     : "bg-white text-[#7a5c44] border border-[#eadfd4]"
                 }`}
               >
@@ -590,157 +484,129 @@ export default function MyReportsPage() {
           {/* EMPTY */}
           {filteredReports.length === 0 && (
             <div className="bg-white rounded-[30px] p-12 text-center shadow-sm border border-[#eee5da]">
-              <div className="text-6xl mb-4">
-                📭
-              </div>
-
-              <h2 className="text-2xl font-bold text-[#6f4324]">
-                Tidak ada laporan
-              </h2>
-
-              <p className="text-[#9b8573] mt-2">
-                Laporan yang kamu buat akan
-                muncul di sini
-              </p>
+              <div className="text-6xl mb-4">📭</div>
+              <h2 className="text-2xl font-bold text-[#6f4324]">Tidak ada laporan</h2>
+              <p className="text-[#9b8573] mt-2">Laporan yang kamu buat akan muncul di sini</p>
             </div>
           )}
 
           {/* GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
             {filteredReports.map((report) => (
-
               <div
                 key={report.id}
-                className="group bg-white rounded-[30px] overflow-hidden border border-[#eee5da] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300"
+                className="group bg-white rounded-[30px] overflow-hidden border border-[#eee5da] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col"
               >
-
+                {/* Clickable area */}
                 <div
-                  onClick={() => {
-                    setSelectedReport(report);
-                    fetchChats(report.id);
-                  }}
-                  className="cursor-pointer"
+                  onClick={() => { setSelectedReport(report); fetchChats(report.id); }}
+                  className="cursor-pointer flex-1"
                 >
-
                   <div className="relative overflow-hidden">
-
                     <img
-                      src={
-                        report.image
-                          ? `http://localhost:5000/uploads/${report.image}`
-                          : "/no-image.png"
-                      }
-                      onError={(e) => {
-                        e.target.src =
-                          "/no-image.png";
-                      }}
+                      src={report.image ? `http://localhost:5000/uploads/${report.image}` : "/no-image.png"}
+                      onError={(e) => { e.target.src = "/no-image.png"; }}
                       alt="report"
-                      className="w-full h-56 object-cover group-hover:scale-105 transition duration-500"
+                      className="w-full h-48 object-cover group-hover:scale-105 transition duration-500"
                     />
-
                     <div className="absolute top-4 right-4">
-                      <StatusBadge
-                        status={report.status}
-                      />
+                      <StatusBadge status={report.status} />
                     </div>
-
                   </div>
 
                   <div className="p-5 space-y-3">
-
                     <div>
-                      <h3 className="font-extrabold text-lg text-[#2b1d15] line-clamp-1">
-                        {report.header}
-                      </h3>
-
+                      <h3 className="font-extrabold text-lg text-[#2b1d15] line-clamp-1">{report.header}</h3>
                       <p className="text-xs text-[#a07a5e] mt-1">
-                        {report.created_at
-                          ? new Date(
-                              report.created_at
-                            ).toLocaleDateString(
-                              "id-ID"
-                            )
-                          : ""}
+                        {report.created_at ? new Date(report.created_at).toLocaleDateString("id-ID") : ""}
                       </p>
                     </div>
-
-                    <p className="text-sm text-[#6b5040] line-clamp-3 leading-relaxed">
-                      {report.body}
-                    </p>
-
+                    <p className="text-sm text-[#6b5040] line-clamp-3 leading-relaxed">{report.body}</p>
                     <div className="flex items-center text-xs text-[#9b8573]">
-                      <MapPin
-                        size={14}
-                        className="mr-1"
-                      />
-
+                      <MapPin size={14} className="mr-1" />
                       {report.location || "-"}
                     </div>
 
+                    {/* ── REASON BANNER (inside card content) ── */}
+                    {(report.status?.toLowerCase() === "approved" || report.status?.toLowerCase() === "rejected") && (
+                      <div className={`flex items-start gap-2.5 rounded-2xl px-3.5 py-3 mt-1 ${
+                        report.status?.toLowerCase() === "approved"
+                          ? "bg-emerald-50 border border-emerald-200"
+                          : "bg-red-50 border border-red-200"
+                      }`}>
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 ${
+                          report.status?.toLowerCase() === "approved" ? "bg-emerald-100" : "bg-red-100"
+                        }`}>
+                          {report.status?.toLowerCase() === "approved"
+                            ? <CheckCircle size={13} className="text-emerald-600" />
+                            : <XCircle size={13} className="text-red-500" />
+                          }
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-[10px] font-bold uppercase tracking-wide mb-0.5 ${
+                            report.status?.toLowerCase() === "approved" ? "text-emerald-700" : "text-red-600"
+                          }`}>
+                            {report.status?.toLowerCase() === "approved" ? "Pesan dari Admin" : "Alasan Penolakan"}
+                          </p>
+                          <p className={`text-[11px] leading-relaxed ${
+                            report.status?.toLowerCase() === "approved" ? "text-emerald-800" : "text-red-700"
+                          }`}>
+                            {report.reason || (
+                              report.status?.toLowerCase() === "approved"
+                                ? FALLBACK_APPROVED_REASON
+                                : FALLBACK_REJECTED_REASON
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-
                 </div>
 
-                {/* DELETE */}
+                {/* DELETE (only pending) */}
                 {report.status?.toLowerCase() === "pending" && (
                   <div className="px-5 pb-5">
                     <button
                       onClick={() => handleDelete(report.id)}
-                      className="w-full h-12 rounded-2xl bg-linear-to-r from-red-500 to-red-400 hover:opacity-90 text-white font-semibold flex items-center justify-center gap-2 transition"
+                      className="w-full h-12 rounded-2xl bg-gradient-to-r from-red-500 to-red-400 hover:opacity-90 text-white font-semibold flex items-center justify-center gap-2 transition"
                     >
                       <Trash2 size={16} />
                       Delete Report
                     </button>
                   </div>
                 )}
-
               </div>
-
             ))}
           </div>
         </div>
       </main>
 
-      {/* MODAL */}
+      {/* ══════════════════════════════
+          MODAL DETAIL LAPORAN
+      ══════════════════════════════ */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-
           <div className="bg-white rounded-[30px] w-full max-w-3xl max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
 
             {/* HEADER */}
             <div className="p-6 border-b border-[#f0ebe5] flex items-center justify-between">
-
               <div className="flex items-center gap-4">
-
                 <button
-                  onClick={() =>
-                    setSelectedReport(null)
-                  }
+                  onClick={() => setSelectedReport(null)}
                   className="w-11 h-11 rounded-2xl bg-[#f5eee8] flex items-center justify-center"
                 >
                   <ArrowLeft size={18} />
                 </button>
-
                 <div>
-                  <h2 className="font-extrabold text-xl text-[#2b1d15]">
-                    {selectedReport.header}
-                  </h2>
-
-                  <p className="text-sm text-[#9b8573]">
-                    Detail laporan
-                  </p>
+                  <h2 className="font-extrabold text-xl text-[#2b1d15]">{selectedReport.header}</h2>
+                  <p className="text-sm text-[#9b8573]">Detail laporan</p>
                 </div>
-
               </div>
-
-              <StatusBadge
-                status={selectedReport.status}
-              />
+              <StatusBadge status={selectedReport.status} />
             </div>
 
             {/* CONTENT */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
               <img
                 src={
@@ -749,125 +615,107 @@ export default function MyReportsPage() {
                     : "https://placehold.co/600x400"
                 }
                 alt="report"
-                className="w-full h-72 object-cover rounded-3xl"
+                className="w-full h-64 object-cover rounded-3xl"
               />
 
+              {/* Meta */}
               <div className="flex flex-wrap gap-3">
                 <div className="bg-[#f8f3ee] px-4 py-2 rounded-xl flex items-center gap-2 text-sm text-[#6f4324] font-medium">
                   <MapPin size={15} />
-                  {selectedReport.location ||
-                    "-"}
+                  {selectedReport.location || "-"}
                 </div>
-
                 <div className="bg-[#f8f3ee] px-4 py-2 rounded-xl flex items-center gap-2 text-sm text-[#6f4324] font-medium">
                   <Calendar size={15} />
-                  {new Date(
-                    selectedReport.created_at
-                  ).toLocaleDateString("id-ID")}
+                  {new Date(selectedReport.created_at).toLocaleDateString("id-ID")}
                 </div>
               </div>
 
+              {/* Body */}
               <div className="bg-[#fcfaf8] border border-[#f0ebe5] p-5 rounded-3xl">
-                <p className="leading-relaxed text-[#5b4638]">
-                  {selectedReport.body}
-                </p>
+                <p className="leading-relaxed text-[#5b4638]">{selectedReport.body}</p>
               </div>
+
+              {/* ── REASON BANNER (shown in modal) ── */}
+              <ModalReasonBanner
+                status={selectedReport.status}
+                reason={selectedReport.reason}
+              />
+
+              {/* Pending notice */}
+              {selectedReport.status?.toLowerCase() === "pending" && (
+                <div className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-3xl p-5">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
+                    <Clock size={20} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-amber-700 uppercase tracking-widest mb-1">
+                      ⏳ Menunggu Verifikasi
+                    </p>
+                    <p className="text-sm text-amber-800 leading-relaxed">
+                      Laporan Anda sedang dalam proses review oleh admin. Mohon tunggu konfirmasi lebih lanjut.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* CHAT */}
               <div>
-
                 <h3 className="text-sm font-bold uppercase tracking-widest text-[#a07a5e] mb-4 flex items-center gap-2">
                   <MessageCircle size={17} />
                   Diskusi Laporan
                 </h3>
 
                 <div className="space-y-4">
-
-                  {chats.map((chat) => (
-
-                    <div
-                      key={chat.id}
-                      className={`flex ${
-                        chat.sender_id ===
-                        JSON.parse(
-                          localStorage.getItem(
-                            "user"
-                          )
-                        ).id
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-
-                      <div
-                        className={`max-w-[80%] p-4 rounded-2xl text-sm shadow-sm ${
-                          chat.sender_id ===
-                          JSON.parse(
-                            localStorage.getItem(
-                              "user"
-                            )
-                          ).id
-                            ? "bg-linear-to-r from-[#6f4324] to-[#8a5a39] text-white rounded-tr-none"
-                            : "bg-[#f5eee8] text-[#3d2a20] rounded-tl-none"
-                        }`}
-                      >
-
-                        <p>{chat.message}</p>
-
-                        <p className="text-[10px] mt-2 opacity-60 text-right">
-                          {new Date(
-                            chat.created_at
-                          ).toLocaleTimeString(
-                            [],
-                            {
-                              hour: "2-digit",
-                              minute:
-                                "2-digit",
-                            }
-                          )}
-                        </p>
-
-                      </div>
-
+                  {chats.length === 0 && (
+                    <div className="text-center py-6 text-[#b89f8d]">
+                      <Info size={24} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-xs">Belum ada pesan. Mulai diskusi dengan admin.</p>
                     </div>
+                  )}
 
-                  ))}
-
+                  {chats.map((chat) => {
+                    const currentUserId = JSON.parse(localStorage.getItem("user")).id;
+                    const isMe = chat.sender_id === currentUserId;
+                    return (
+                      <div key={chat.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                        <div
+                          className={`max-w-[80%] p-4 rounded-2xl text-sm shadow-sm ${
+                            isMe
+                              ? "bg-gradient-to-r from-[#6f4324] to-[#8a5a39] text-white rounded-tr-none"
+                              : "bg-[#f5eee8] text-[#3d2a20] rounded-tl-none"
+                          }`}
+                        >
+                          <p>{chat.message}</p>
+                          <p className="text-[10px] mt-2 opacity-60 text-right">
+                            {new Date(chat.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-
               </div>
-
             </div>
 
-            {/* INPUT */}
+            {/* INPUT CHAT */}
             <div className="p-5 border-t border-[#f0ebe5] bg-[#fcfaf8]">
-
               <div className="flex items-center gap-3 bg-white rounded-2xl px-3 py-2 border border-[#eadfd4]">
-
                 <input
                   value={chatMessage}
-                  onChange={(e) =>
-                    setChatMessage(
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => setChatMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                   placeholder="Ketik pesan..."
                   className="flex-1 bg-transparent outline-none text-sm"
                 />
-
                 <button
                   onClick={sendMessage}
-                  className="w-11 h-11 rounded-xl bg-linear-to-r from-[#6f4324] to-[#8a5a39] text-white flex items-center justify-center"
+                  className="w-11 h-11 rounded-xl bg-gradient-to-r from-[#6f4324] to-[#8a5a39] text-white flex items-center justify-center"
                 >
                   <Send size={18} />
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
       )}
     </div>
